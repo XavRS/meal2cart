@@ -178,7 +178,7 @@ class MercadonaClient:
         try:
             accept = self.page.locator(SEL_COOKIE_ACCEPT)
             if await accept.count() > 0:
-                await accept.first().click()
+                await accept.first.click()
                 log("cookies", "Cookies aceptadas")
         except Exception as exc:  # pragma: no cover
             log("cookies", f"Aceptar cookies omitido: {exc}")
