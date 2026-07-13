@@ -117,6 +117,16 @@ def test_cli_cp_override():
     assert args.cp == "46001"
 
 
+def test_cli_login_flag():
+    args = mc.build_parser().parse_args(["--search", "leche", "--login"])
+    assert args.login is True
+
+
+def test_cli_login_default():
+    args = mc.build_parser().parse_args(["--search", "leche"])
+    assert args.login is False
+
+
 # ---------------------------------------------------------------------------
 # Mock Playwright para probar MercadonaClient
 # ---------------------------------------------------------------------------
@@ -228,7 +238,7 @@ def test_run_search_dryrun_with_mocks(monkeypatch, capsys, tmp_path):
         async def __aexit__(self, *a):
             return None
 
-        async def open(self):
+        async def open(self, force_login=False):
             return None
 
         async def add_many(self, items, dry_run=True):
@@ -244,9 +254,21 @@ def test_run_search_dryrun_with_mocks(monkeypatch, capsys, tmp_path):
 
 
 def test_main_returns_nonzero_on_error(monkeypatch, capsys):
-    def boom(*a, **kw):
-        raise RuntimeError("foo")
+    # Simulamos un error real dentro del flujo async (no mockeando asyncio.run
+    # para evitar el warning "coroutine was never awaited")
+    class FailingClient:
+        async def __aenter__(self):
+            return self
 
-    monkeypatch.setattr(mc.asyncio, "run", boom)
+        async def __aexit__(self, *a):
+            return None
+
+        async def open(self, force_login=False):
+            raise RuntimeError("foo")
+
+        async def add_many(self, items, dry_run=True):
+            return []
+
+    monkeypatch.setattr(mc, "MercadonaClient", lambda **kw: FailingClient())
     rc = mc.main(["--search", "x"])
     assert rc == 1

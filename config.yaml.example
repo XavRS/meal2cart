@@ -36,5 +36,7 @@ mercadona:
 #   COOKIDOUGH_LANGUAGE         (default: es)
 #   SPOONACULAR_API_KEY
 #   MERCADONA_CP                (opcional, default 08001)
+#   MERCADONA_EMAIL             (opcional, para login automático)
+#   MERCADONA_PASSWORD          (opcional, para login automático)
 #   RECIPE_OUTPUT_PATH          (opcional, default ~/recetas)
 #   RECIPE_FILENAME_PATTERN     (opcional, default "{date}.md")

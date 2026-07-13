@@ -115,6 +115,7 @@ Flags útiles:
 | `--dry-run`    | Sólo busca los productos, no añade al carrito |
 | `--json`       | Salida en JSON (para scripting)            |
 | `--headed`     | Mostrar navegador (no headless)            |
+| `--login`      | Forzar inicio de sesión (usa credenciales de entorno `MERCADONA_EMAIL`/`MERCADONA_PASSWORD` o modo manual si `--headed`) |
 | `--cp`         | Override del código postal                 |
 | `--cookie-file`| Ruta del fichero de cookies                |
 
@@ -147,7 +148,8 @@ meal2cart/
 |---------|---------------|----------|
 | `Playwright no está instalado` | Falta el paquete o el navegador | `pip install playwright && playwright install chromium` |
 | Mercadona no avanza tras CP | Cookie stale o captcha | Borra `/tmp/mercadona_cookies.json` y reintenta con `--headed` |
-| `Login wall detected` | Mercadona pide inicio de sesión | Inicia sesión manualmente (mod headed) y vuelve a ejecutar |
+| `Login wall detected` | Mercadona pide inicio de sesión | Usa `--login` con `MERCADONA_EMAIL` + `MERCADONA_PASSWORD`, o `--login --headed` para login manual |
+| ✗ Login fallido | Credenciales incorrectas o formulario no encontrado | Ejecuta `--login --headed` para depurar y verificar selectores |
 | Spoonacular 401/402 | API key inválida o cuota agotada | Ver `references/spoonacular_setup.md` |
 | cookidough 403 | Cookies caducadas | Borra `~/.hermes/data/cookidough_cookies.json` y re-logín |
 | Markdown vacío | JSON de entrada mal formado | Verifica `week_start` y `meals.*.{comida,cena}` |

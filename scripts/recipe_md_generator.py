@@ -182,8 +182,12 @@ def pick_emoji(day_name: str, meal: dict[str, Any] | None) -> str:
     return icon or WEEKDAY_EMOJI.get(day_name, "🍽️")
 
 
-def extract_recipe_steps(recipe: dict[str, Any]) -> list[str]:
-    steps = recipe.get("steps") or []
+def extract_recipe_steps(recipe: dict[str, Any] | str | list[str]) -> list[str]:
+    # Acepta dict (con clave "steps"), string multilínea, o lista directa
+    if isinstance(recipe, dict):
+        steps = recipe.get("steps") or []
+    else:
+        steps = recipe
     if isinstance(steps, str):
         return [s.strip() for s in steps.split("\n") if s.strip()]
     return [str(s).strip() for s in steps if str(s).strip()]

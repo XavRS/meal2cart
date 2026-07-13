@@ -38,13 +38,17 @@ except ImportError:  # pragma: no cover - importación opcional para tests
 
 MERCADONA_URL = "https://www.mercadona.es/"
 TIENDA_HOST = "tienda.mercadona.es"
+LOGIN_URL = "https://tienda.mercadona.es/?authenticate-user="
 DEFAULT_CP = os.environ.get("MERCADONA_CP", "08001")
 COOKIE_FILE = os.environ.get(
     "MERCADONA_COOKIES_FILE", "/tmp/mercadona_cookies.json"
 )
+MERCADONA_EMAIL = os.environ.get("MERCADONA_EMAIL", "")
+MERCADONA_PASSWORD = os.environ.get("MERCADONA_PASSWORD", "")
 ADD_TO_CART_DELAY = 1.5  # segundos entre clics de añadir al carrito
 SEARCH_WAIT = 5.0  # segundos tras buscar
 CP_REDIRECT_WAIT = 5.0  # segundos tras enviar el CP
+LOGIN_TIMEOUT = 30.0  # segundos para login manual/interactivo
 
 PRICE_RE = re.compile(r"(\d+[.,]\d+)\s*€")
 
@@ -56,6 +60,15 @@ SEL_PRODUCT = ".product-cell--actionable"
 SEL_ADD_CART_PRIMARY = 'button[data-testid="product-quantity-button"]'
 SEL_ADD_CART_FALLBACK = 'button[aria-label="Añadir al carro"]'
 SEL_COOKIE_ACCEPT = 'button:has-text("Aceptar")'
+
+# Login selectors (verificados spike 2026-07)
+SEL_IDENTIFICATE = 'button[data-testid="dropdown-button"]:has-text("Identifícate")'
+SEL_LOGIN_EMAIL_OPTION = 'text="Continuar con email"'
+SEL_LOGIN_EMAIL_INPUT = 'input[type="email"]'
+SEL_LOGIN_PASSWORD_INPUT = 'input[type="password"]'
+SEL_LOGIN_SUBMIT = 'button:has-text("Continuar"), button:has-text("Iniciar sesión"), button:has-text("Entrar")'
+SEL_LOGIN_SUCCESS_INDICATOR = 'text="Mi cuenta", [data-testid="user-menu"]'
+SEL_LOGIN_ERROR = '[role="alert"], text="incorrect", text="inténtalo"'
 
 
 def log(step: str, msg: str = "") -> None:
@@ -167,12 +180,16 @@ class MercadonaClient:
             raise RuntimeError("Página no inicializada. Usa 'async with MercadonaClient()'")
         return self._page
 
-    async def open(self) -> None:
+    async def open(self, force_login: bool = False) -> None:
         log("nav", f"Abriendo {MERCADONA_URL}")
         await self.page.goto(MERCADONA_URL, wait_until="domcontentloaded")
         await self._accept_cookies()
         if not await self._is_in_tienda():
             await self._set_postal_code(self.cp)
+
+        # Intentar login si hay credenciales o se fuerza
+        if force_login or MERCADONA_EMAIL:
+            await self._do_login()
 
     async def _accept_cookies(self) -> None:
         try:
@@ -220,6 +237,112 @@ class MercadonaClient:
                     return True
         except Exception:
             pass
+        return False
+
+    # -- login --------------------------------------------------------------
+    async def _do_login(self, email: str = "", password: str = "") -> bool:
+        """Inicia sesión en Mercadona con email/password.
+
+        Si email/password están vacíos y el navegador está en modo headed,
+        espera LOGIN_TIMEOUT segundos para que el usuario haga login manual.
+        Devuelve True si el login tuvo éxito.
+        """
+        email = email or MERCADONA_EMAIL
+        password = password or MERCADONA_PASSWORD
+
+        log("login", "Abriendo página de autenticación…")
+        await self.page.goto(LOGIN_URL, wait_until="domcontentloaded")
+        await self.page.wait_for_timeout(3000)
+
+        # Cerrar modal de cookies si aparece
+        await self._accept_cookies()
+
+        # Abrir dropdown "Identifícate"
+        identifica = self.page.locator(SEL_IDENTIFICATE)
+        if await identifica.count() > 0:
+            await identifica.first.click()
+            await self.page.wait_for_timeout(2000)
+            log("login", "Dropdown Identifícate abierto")
+        else:
+            log("login", "Botón Identifícate no encontrado (¿ya logueado?)")
+            if await self._is_logged_in():
+                log("login", "✓ Ya hay sesión activa")
+                return True
+
+        # Click en "Continuar con email"
+        email_opt = self.page.locator(SEL_LOGIN_EMAIL_OPTION)
+        if await email_opt.count() > 0:
+            await email_opt.first.click()
+            await self.page.wait_for_timeout(3000)
+            log("login", "Opción 'Continuar con email' seleccionada")
+        else:
+            log("login", "No se encontró opción 'Continuar con email'")
+
+        # Rellenar formulario si hay credenciales
+        if email and password:
+            log("login", "Rellenando credenciales…")
+            email_input = self.page.locator(SEL_LOGIN_EMAIL_INPUT).first
+            pass_input = self.page.locator(SEL_LOGIN_PASSWORD_INPUT).first
+
+            if await email_input.count() > 0 and await pass_input.count() > 0:
+                await email_input.fill(email)
+                await pass_input.fill(password)
+                await self.page.wait_for_timeout(500)
+
+                submit = self.page.locator(SEL_LOGIN_SUBMIT).first
+                if await submit.count() > 0:
+                    await submit.click()
+                    await self.page.wait_for_timeout(5000)
+                    log("login", "Formulario enviado")
+                else:
+                    log("login", "⚠ No se encontró botón de submit")
+            else:
+                log("login", "⚠ No se encontraron campos email/password")
+                log("login", "Prueba con --headed para hacer login manual")
+        elif not self.headless:
+            log("login", f"Modo headed sin credenciales: esperando {LOGIN_TIMEOUT}s para login manual…")
+            log("login", "  (Define MERCADONA_EMAIL y MERCADONA_PASSWORD para login automático)")
+            await self.page.wait_for_timeout(int(LOGIN_TIMEOUT * 1000))
+        else:
+            log("login", "No hay credenciales configuradas. Define MERCADONA_EMAIL y MERCADONA_PASSWORD")
+
+        # Verificar si el login funcionó
+        if await self._is_logged_in():
+            log("login", "✓ Login exitoso")
+            await self._save_state()
+            return True
+
+        # Buscar mensajes de error
+        error_el = self.page.locator(SEL_LOGIN_ERROR).first
+        if await error_el.count() > 0:
+            try:
+                err_text = await error_el.inner_text()
+                log("login", f"✗ Error de login: {err_text[:200]}")
+            except Exception:
+                log("login", "✗ Login fallido (sin mensaje de error)")
+        else:
+            log("login", "✗ Login fallido — verifica credenciales o usa --headed")
+
+        return False
+
+    async def _is_logged_in(self) -> bool:
+        """Detecta si hay sesión activa buscando indicadores de usuario logueado."""
+        for sel in SEL_LOGIN_SUCCESS_INDICATOR.split(", "):
+            try:
+                if await self.page.locator(sel.strip()).count() > 0:
+                    return True
+            except Exception:
+                pass
+        # También buscar que ya no aparece el botón "Identifícate"
+        identifica = self.page.locator(SEL_IDENTIFICATE)
+        if await identifica.count() == 0:
+            # Podría estar logueado o la página no cargó — verificar contexto
+            try:
+                # Si estamos en la tienda y no hay dropdown, asumimos login
+                if "tienda" in self.page.url:
+                    return True
+            except Exception:
+                pass
         return False
 
     # -- búsqueda ----------------------------------------------------------
@@ -347,6 +470,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true", help="Solo buscar, no añadir al carrito")
     p.add_argument("--json", action="store_true", help="Salida en formato JSON")
     p.add_argument("--headed", action="store_true", help="Mostrar navegador (no headless)")
+    p.add_argument("--login", action="store_true", help="Forzar login (con credenciales de entorno o manual si --headed)")
     p.add_argument("--cp", default=DEFAULT_CP, help=f"Código postal (default: {DEFAULT_CP})")
     p.add_argument("--cookie-file", default=COOKIE_FILE, help="Ruta del fichero de cookies")
     return p
@@ -374,7 +498,7 @@ async def run(args: argparse.Namespace) -> int:
     async with MercadonaClient(
         cookie_file=args.cookie_file, headless=not args.headed, cp=args.cp
     ) as client:
-        await client.open()
+        await client.open(force_login=args.login)
         results = await client.add_many(items, dry_run=dry_run)
 
     single_search = args.search is not None
