@@ -30,10 +30,11 @@ Sin flags, leerá de variables de entorno.
 
 | Variable | Descripción | Default |
 |----------|-------------|---------|
-| `COOKIDOO_EMAIL` | Email de la cuenta Cookidoo | (obligatorio) |
-| `COOKIDOO_PASSWORD` | Password de la cuenta | (obligatorio) |
+| `COOKIDOUGH_EMAIL` | Email de la cuenta Cookidoo | (obligatorio) |
+| `COOKIDOUGH_PASSWORD` | Password de la cuenta | (obligatorio) |
 | `COOKIDOUGH_COOKIES_FILE` | Ruta donde persistir cookies | `~/.cache/cookidough/cookies.json` |
-| `COOKIDOO_COUNTRY` | Dominio Cookidoo (`es`, `com`, `fr`…) | `es` |
+| `COOKIDOUGH_COUNTRY` | Código ISO país (`es`, `de`, `fr`…) | `de` |
+| `COOKIDOUGH_LANGUAGE` | Código ISO idioma (`es`, `de`, `fr`…) | `de` |
 
 ### `~/.hermes/config.yaml`
 
@@ -43,17 +44,20 @@ mcp_servers:
     command: uvx
     args: ["cookidough-mcp"]
     env:
-      COOKIDOO_EMAIL: "${COOKIDOO_EMAIL}"
-      COOKIDOO_PASSWORD: "${COOOKIDOO_PASSWORD}"
+      COOKIDOUGH_EMAIL: "${COOKIDOUGH_EMAIL}"
+      COOKIDOUGH_PASSWORD: "${COOKIDOUGH_PASSWORD}"
       COOKIDOUGH_COOKIES_FILE: "~/.hermes/data/cookidough_cookies.json"
-      COOKIDOO_COUNTRY: "es"
+      COOKIDOUGH_COUNTRY: "es"
+      COOKIDOUGH_LANGUAGE: "es"
 ```
 
 Exporta las variables:
 
 ```bash
-export COOKIDOO_EMAIL="tu@email.es"
-export COOKIDOO_PASSWORD="tu_password"
+export COOKIDOUGH_EMAIL="tu@email.es"
+export COOKIDOUGH_PASSWORD="tu_password"
+export COOKIDOUGH_COUNTRY="es"
+export COOKIDOUGH_LANGUAGE="es"
 ```
 
 ## 4. Primera ejecución (login interactivo)
