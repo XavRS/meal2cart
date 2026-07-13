@@ -1,0 +1,36 @@
+# config.yaml.example — Configuración de Hermes para meal2cart
+# Copia este fichero a ~/.hermes/config.yaml y completa las variables
+# de entorno. NO subas el fichero con credenciales a git.
+
+mcp_servers:
+  cookidough:
+    command: uvx
+    args: ["cookidough-mcp"]
+    env:
+      COOKIDOO_EMAIL: "${COOKIDOO_EMAIL}"
+      COOKIDOO_PASSWORD: "${COOKIDOO_PASSWORD}"
+      COOKIDOUGH_COOKIES_FILE: "~/.hermes/data/cookidough_cookies.json"
+
+  spoonacular:
+    command: npx
+    args: ["ddsky/spoonacular-mcp"]
+    env:
+      SPOONACULAR_API_KEY: "${SPOONACULAR_API_KEY}"
+
+output:
+  recipe_path: "/mnt/vault/Personal/Menjars"
+  recipe_filename_pattern: "{date}.md"
+
+mercadona:
+  cp: "08001"
+  cookie_file: "/tmp/mercadona_cookies.json"
+  add_to_cart_delay: 1.5   # segundos entre clics
+  headed: false            # true para resolver captcha/login manual
+
+# Variables de entorno necesarias (defínelas en tu shell o .env):
+#   COOKIDOO_EMAIL
+#   COOKIDOO_PASSWORD
+#   SPOONACULAR_API_KEY
+#   MERCADONA_CP                (opcional, default 08001)
+#   RECIPE_OUTPUT_PATH          (opcional, default ~/recetas)
+#   RECIPE_FILENAME_PATTERN     (opcional, default "{date}.md")
