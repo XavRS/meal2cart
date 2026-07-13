@@ -7,9 +7,11 @@ mcp_servers:
     command: uvx
     args: ["cookidough-mcp"]
     env:
-      COOKIDOO_EMAIL: "${COOKIDOO_EMAIL}"
-      COOKIDOO_PASSWORD: "${COOKIDOO_PASSWORD}"
+      COOKIDOUGH_EMAIL: "${COOKIDOUGH_EMAIL}"
+      COOKIDOUGH_PASSWORD: "${COOKIDOUGH_PASSWORD}"
       COOKIDOUGH_COOKIES_FILE: "~/.hermes/data/cookidough_cookies.json"
+      COOKIDOUGH_COUNTRY: "es"
+      COOKIDOUGH_LANGUAGE: "es"
 
   spoonacular:
     command: npx
@@ -28,8 +30,10 @@ mercadona:
   headed: false            # true para resolver captcha/login manual
 
 # Variables de entorno necesarias (defínelas en tu shell o .env):
-#   COOKIDOO_EMAIL
-#   COOKIDOO_PASSWORD
+#   COOKIDOUGH_EMAIL
+#   COOKIDOUGH_PASSWORD
+#   COOKIDOUGH_COUNTRY          (default: es)
+#   COOKIDOUGH_LANGUAGE         (default: es)
 #   SPOONACULAR_API_KEY
 #   MERCADONA_CP                (opcional, default 08001)
 #   RECIPE_OUTPUT_PATH          (opcional, default ~/recetas)

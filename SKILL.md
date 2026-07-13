@@ -41,8 +41,10 @@ automatiza la lista de la compra en **Mercadona Online**.
 ### 1. Variables de entorno
 
 ```bash
-export COOKIDOO_EMAIL="…"
-export COOKIDOO_PASSWORD="…"
+export COOKIDOUGH_EMAIL="…"
+export COOKIDOUGH_PASSWORD="…"
+export COOKIDOUGH_COUNTRY="es"
+export COOKIDOUGH_LANGUAGE="es"
 export SPOONACULAR_API_KEY="…"
 export MERCADONA_CP="08001"                    # opcional, default 08001
 export RECIPE_OUTPUT_PATH="/mnt/vault/Personal/Menjars"
