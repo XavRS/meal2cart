@@ -54,7 +54,7 @@
                   │ tienda.mercadona.es carrito │            │
                   └─────────────────────────┘             │
                                                               │
-                  /mnt/vault/Personal/Menjars/semana_*.md ◀──┘
+                  <path_to_md_result>/semana_*.md ◀──┘
 ```
 
 ## Instalación
@@ -101,7 +101,7 @@ Hermes usará `prompts/menu_planning.md` y devolverá un JSON.
 
 ```bash
 python3 scripts/recipe_md_generator.py --input menu_semana.json \
-    --output /mnt/vault/Personal/Menjars/semana_13_julio.md
+    --output <path_to_md_result>/semana_13_julio.md
 ```
 
 ### 3. Consolidar ingredientes
