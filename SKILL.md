@@ -1,3 +1,11 @@
+---
+name: meal-to-cart
+description: "Planifica menús semanales con Cookidoo (Thermomix) y Spoonacular (tradicional), genera recetario .md y automatiza la compra en Mercadona Online."
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+---
+
 # Skill: Hermes Meal-to-Cart
 
 Planifica menús semanales combinando **Cookidoo** (Thermomix) y
