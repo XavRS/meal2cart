@@ -189,15 +189,19 @@ def extract_recipe_steps(recipe: dict[str, Any] | str | list[str]) -> list[str]:
     else:
         steps = recipe
     if isinstance(steps, str):
-        return [s.strip() for s in steps.split("\n") if s.strip()]
-    return [str(s).strip() for s in steps if str(s).strip()]
+        raw = [s.strip() for s in steps.split("\n") if s.strip()]
+    else:
+        raw = [str(s).strip() for s in steps if str(s).strip()]
+    # Elimina prefijos "1.", "2)", "- " que ya vengan en el texto — se re-numeran al renderizar
+    import re
+    return [re.sub(r"^(\d+[\.\)]\s*|-\s*)", "", s) for s in raw]
 
 
-def render_recipe_header(day_name: str, day_num: int, meal: dict[str, Any], slot: str = "Cena") -> str:
+def render_recipe_header(day_name: str, day_num: int, meal: dict[str, Any], slot: str = "cena") -> str:
     title = meal.get("title", "(sin título)")
-    icon_day = WEEKDAY_EMOJI.get(day_name, "🍽️")
     icon, _ = source_to_label(meal.get("source"))
-    return f"## {icon_day} {day_name} {day_num} — {slot.capitalize()}: {title} {icon}"
+    slot_label = slot.capitalize() if slot else "Cena"
+    return f"### {icon} {day_name} {day_num} · {slot_label}: {title}"
 
 
 def render_recipe_image(meal: dict[str, Any]) -> str:
@@ -209,21 +213,25 @@ def render_recipe_image(meal: dict[str, Any]) -> str:
 
 
 def render_recipe_meta(meal: dict[str, Any]) -> str:
+    """Meta de receta en badges: tiempo, personas, kcal, fuente."""
     time = meal.get("time_minutes")
     servings = meal.get("servings")
     cal = meal.get("calories_per_serving")
+    rating = meal.get("rating")
     url = meal.get("url")
     _, label = source_to_label(meal.get("source"))
     link = f"[{label}]({url})" if url else label
     parts = []
     if time is not None:
-        parts.append(f"⏱️ {time} min")
+        parts.append(f"⏱️ **{time} min**")
     if servings is not None:
-        parts.append(f"👥 {servings} personas")
+        parts.append(f"👥 **{servings} personas**")
     if cal is not None:
-        parts.append(f"🔥 {cal} kcal/ración")
+        parts.append(f"🔥 **{cal} kcal/ración**")
+    if rating is not None:
+        parts.append(f"⭐ **{rating}**")
     parts.append(f"🔗 {link}")
-    return " | ".join(parts)
+    return " · ".join(parts)
 
 
 def render_recipe(recipe: dict[str, Any]) -> str:
@@ -231,13 +239,18 @@ def render_recipe(recipe: dict[str, Any]) -> str:
     steps = extract_recipe_steps(recipe)
     src = (recipe.get("source") or "").lower()
     steps_header = "Preparación (Thermomix)" if src == "cookidoo" else "Preparación"
-    lines = [
-        "### Ingredientes",
+    lines: list[str] = []
+    description = recipe.get("description") or recipe.get("summary")
+    if description:
+        lines.append(f"> {description.strip()}")
+        lines.append("")
+    lines.extend([
+        "### 🛒 Ingredientes",
         *[format_ingredient_line(i) for i in ings],
         "",
-        f"### {steps_header}",
+        f"### 👨‍🍳 {steps_header}",
         *[f"{n}. {s}" for n, s in enumerate(steps, 1)],
-    ]
+    ])
     return "\n".join(lines)
 
 
@@ -347,15 +360,35 @@ def render_shopping_list(ingredients: list[Ingredient]) -> str:
 # Render principal
 # ---------------------------------------------------------------------------
 def render_table(meals: dict[str, dict[str, Any]], start: date) -> str:
-    lines = ["| Día | Comida | Cena |", "|-----|--------|------|"]
-    for i, day_name in enumerate(WEEKDAYS_ES):
-        day = start + timedelta(days=i)
-        day_meals = meals.get(day_name, {})
-        comida = day_meals.get("comida")
-        cena = day_meals.get("cena")
-        lines.append(
-            f"| **{day_name} {day.day}** | {_render_cell(comida)} | {_render_cell(cena)} |"
-        )
+    """Tabla semanal compacta: Día | Receta | Tiempo | kcal."""
+    # Detecta si hay comidas además de cenas
+    has_comida = any(day_meals.get("comida") for day_meals in meals.values())
+
+    if has_comida:
+        lines = ["| Día | Comida | Cena |", "|-----|--------|------|"]
+        for i, day_name in enumerate(WEEKDAYS_ES):
+            day = start + timedelta(days=i)
+            day_meals = meals.get(day_name, {})
+            lines.append(
+                f"| **{day_name} {day.day}** | {_render_cell(day_meals.get('comida'))} | {_render_cell(day_meals.get('cena'))} |"
+            )
+    else:
+        lines = ["| Día | Receta | Tiempo | kcal |", "|-----|--------|--------|------|"]
+        for i, day_name in enumerate(WEEKDAYS_ES):
+            day = start + timedelta(days=i)
+            meal = meals.get(day_name, {}).get("cena")
+            if not meal:
+                lines.append(f"| **{day_name} {day.day}** | — | — | — |")
+                continue
+            icon, _ = source_to_label(meal.get("source"))
+            title = meal.get("title", "(sin título)")
+            time = meal.get("time_minutes")
+            cal = meal.get("calories_per_serving")
+            time_str = f"{time} min" if time is not None else "—"
+            cal_str = f"{cal} kcal" if cal is not None else "—"
+            lines.append(
+                f"| **{day_name} {day.day}** | {icon} {title} | {time_str} | {cal_str} |"
+            )
     return "\n".join(lines)
 
 
@@ -364,15 +397,15 @@ def _render_cell(meal: dict[str, Any] | None) -> str:
         return "—"
     icon, _ = source_to_label(meal.get("source"))
     time = meal.get("time_minutes")
-    rating = meal.get("rating")
     cal = meal.get("calories_per_serving")
     parts = [f"{icon} {meal.get('title', '(sin título)')}"]
+    extras = []
     if time is not None:
-        parts.append(f"({time} min)")
-    if rating is not None:
-        parts.append(f"⭐{rating}")
+        extras.append(f"{time} min")
     if cal is not None:
-        parts.append(f"— {cal} kcal")
+        extras.append(f"{cal} kcal")
+    if extras:
+        parts.append(f"({' · '.join(extras)})")
     return " ".join(parts)
 
 
@@ -390,11 +423,13 @@ def compute_stats(meals: dict[str, dict[str, Any]]) -> tuple[float, int]:
 
 def render_weekly_summary(meals: dict[str, dict[str, Any]]) -> str:
     avg, total = compute_stats(meals)
+    if not avg:
+        return "> 🍳 = Thermomix · 🥘 = Tradicional"
+    total_str = f"{int(total):,}".replace(",", ".")
     return (
-        "> 🍳 = Thermomix, 🥘 = Tradicional\n"
-        f"> 🔥 Media: ~{avg:.0f} kcal/cena | Total semanal: ~{total:,} kcal\n"
-        "> 📅 Las recetas 🍳 están sincronizadas en Cookidoo → disponibles en tu Thermomix"
-    ).replace(",", ".")
+        "> 🍳 = Thermomix · 🥘 = Tradicional\n"
+        f"> 🔥 Media: **~{avg:.0f} kcal/plato** · Total semanal: **~{total_str} kcal**"
+    )
 
 
 def render_menu(data: dict[str, Any]) -> str:
@@ -403,10 +438,14 @@ def render_menu(data: dict[str, Any]) -> str:
     meals = data.get("meals", {})
 
     out: list[str] = []
-    out.append(f"# Menú semanal — {format_date_range(week_start)}")
-    out.append(f"**{prefs}**" if prefs else "")
+    # ── Cabecera ─────────────────────────────────────────────
+    out.append(f"# 🍽️ Menú semanal — {format_date_range(week_start)}")
+    if prefs:
+        out.append(f"_{prefs}_")
     out.append("")
-    out.append("## 📅 Tabla semanal")
+
+    # ── Tabla resumen (única parte superior) ─────────────────
+    out.append("## 📅 Resumen de la semana")
     out.append("")
     out.append(render_table(meals, week_start))
     out.append("")
@@ -415,7 +454,10 @@ def render_menu(data: dict[str, Any]) -> str:
     out.append("---")
     out.append("")
 
-    # Recetas ordenadas L-D
+    # ── Recetas detalladas con foto ──────────────────────────
+    out.append("## 📋 Recetas detalladas")
+    out.append("")
+
     for i, day_name in enumerate(WEEKDAYS_ES):
         day = week_start + timedelta(days=i)
         day_meals = meals.get(day_name, {})
@@ -423,11 +465,12 @@ def render_menu(data: dict[str, Any]) -> str:
             meal = day_meals.get(slot)
             if not meal:
                 continue
-            out.append("")
             out.append(render_recipe_header(day_name, day.day, meal, slot))
-            image = render_recipe_image(meal)
+            out.append("")
+            image = render_recipe_image(meal).strip()
             if image:
                 out.append(image)
+                out.append("")
             out.append(render_recipe_meta(meal))
             out.append("")
             out.append(render_recipe(meal))
@@ -435,15 +478,8 @@ def render_menu(data: dict[str, Any]) -> str:
             out.append("---")
             out.append("")
 
-    # Lista de la compra consolidada
-    ingredients = consolidate_ingredients(meals)
-    out.append("")
-    out.append(render_shopping_list(ingredients))
-    out.append("")
-    out.append("---")
-    out.append("")
     today = datetime.now().strftime("%d/%m/%Y")
-    out.append(f"*Generado por Hermes Meal-to-Cart — {today}*")
+    out.append(f"_Generado por Hermes Meal-to-Cart — {today}_")
     out.append("")
     return "\n".join(out)
 

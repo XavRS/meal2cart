@@ -44,7 +44,7 @@
 ```
 
 Cada receta debe contener:
-`title`, `source` (`"cookidoo"` | `"spoonacular"`), `url`, `image_url` (URL de la imagen del plato), `time_minutes`, `servings`, `rating` (opcional), `calories_per_serving`, `ingredients` (`[{name, amount, unit}]`), `steps` (`[str]`).
+`title`, `source` (`"cookidoo"` | `"spoonacular"`), `url`, `image_url` (URL de la imagen del plato), `time_minutes`, `servings`, `calories_per_serving` (**obligatorio** — visible en tabla resumen y en meta de cada receta), `rating` (opcional), `description` (1-2 frases descriptivas del plato, opcional pero recomendado), `ingredients` (`[{name, amount, unit}]`), `steps` (`[str]` — sin prefijos "1.", el generador los añade).
 
 ## Presentación al usuario
 

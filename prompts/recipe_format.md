@@ -1,128 +1,130 @@
-# Plantilla — Formato del recetario Markdown
+# Plantilla — Formato del recetario Markdown (v2.2)
 
-Esta plantilla define la SALIDA EXACTA que debe producir `scripts/recipe_md_generator.py`. Hermes la usa al presentar/volcar el recetario.
+Esta plantilla define la SALIDA EXACTA que produce `scripts/recipe_md_generator.py`.
+
+## Filosofía del layout
+
+El .md tiene **dos secciones únicamente**:
+
+1. **Cabecera + tabla resumen semanal arriba** (con kcal visibles).
+2. **Recetas detalladas debajo**, cada una con: foto del plato, meta con kcal, descripción breve, ingredientes y pasos.
+
+**Ya NO se incluye** en el .md: lista de la compra consolidada, resumen del carrito Mercadona, ni resúmenes nutricionales adicionales. Esas partes se gestionan aparte (vía `mercadona_cli_wrapper` y el flujo Gate 1/Gate 2 en Telegram).
 
 ## Estructura
 
 ````markdown
-# Menú semanal — {día_inicio} al {día_fin} de {mes} de {año}
-**{preferencias}**
+# 🍽️ Menú semanal — {día_inicio} al {día_fin} de {mes} de {año}
+_{preferencias}_
 
-## 📅 Tabla semanal
+## 📅 Resumen de la semana
 
-| Día | Comida | Cena |
-|-----|--------|------|
-| **Lunes {n}** | {emoji_comida} {titulo} ({tiempo} min) ⭐{rating} — {kcal} kcal | {emoji_cena} {titulo} ({tiempo} min) ⭐{rating} — {kcal} kcal |
-| **Martes {n}** | ... | ... |
-| ... (7 filas, L-D) |
+| Día | Receta | Tiempo | kcal |
+|-----|--------|--------|------|
+| **Lunes {n}** | {emoji_fuente} {titulo} | {t} min | {kcal} kcal |
+| ... (7 filas L-D) |
 
-> 🍳 = Thermomix, 🥘 = Tradicional
-> 🔥 Media: ~{avg} kcal/cena | Total semanal: ~{total} kcal
-> 📅 Las recetas 🍳 están sincronizadas en Cookidoo → disponibles en tu Thermomix
+> 🍳 = Thermomix · 🥘 = Tradicional
+> 🔥 Media: **~{avg} kcal/plato** · Total semanal: **~{total} kcal**
 
 ---
 
-## {emoji_día} {Día} {n} — {slot}: {titulo} {emoji_fuente}
+## 📋 Recetas detalladas
+
+### {emoji_fuente} {Día} {n} · {slot}: {titulo}
 
 ![{titulo}]({image_url})
 
-⏱️ {tiempo} min | 👥 {servings} personas | 🔥 {kcal} kcal/ración | 🔗 [{Fuente}]({url})
+⏱️ **{t} min** · 👥 **{servings} personas** · 🔥 **{kcal} kcal/ración** · ⭐ **{rating}** · 🔗 [{Fuente}]({url})
 
-### Ingredientes
+> {descripción breve del plato en 1-2 frases}
+
+### 🛒 Ingredientes
 - {cantidad}{unidad} {ingrediente}
 - ...
 
-### Preparación{ (Thermomix) si Cookidoo}
+### 👨‍🍳 Preparación{ (Thermomix) si Cookidoo}
 1. {paso}
 2. {paso}
-...
 
 ---
 
 (repetir bloque por cada receta)
 
----
-
-## 📊 Lista de la compra consolidada
-
-### 🥩 Proteínas
-| Ingrediente | Cantidad | Para recetas |
-|-------------|----------|--------------|
-| ... | ... | L, M, ... |
-
-### 🥬 Verduras y frutas
-| Ingrediente | Cantidad | Para recetas |
-|-------------|----------|--------------|
-| ... | ... | ... |
-
-### 🥫 Despensa
-| Ingrediente | Cantidad | Para recetas |
-|-------------|----------|--------------|
-| ... | ... | ... |
-
-### 🧂 Condimentos y básicos
-| Ingrediente | Cantidad | Para recetas |
-|-------------|----------|--------------|
-| ... | — (comprobar stock) | Varias |
-
----
-
-*Generado por Hermes Meal-to-Cart — {DD/MM/YYYY}*
+_Generado por Hermes Meal-to-Cart — {DD/MM/YYYY}_
 ````
 
 ## Reglas de formato
 
-1. **Título**: `# Menú semanal — {d_init} al {d_end} de {mes_nombre} de {año}` (mes en español minúscula: enero, febrero, …).
-2. **Subtítulo**: preferencias en negrita. Si no hay, omitir la línea.
-3. **Tabla**: siempre 7 filas. Si falta slot, usar `—`.
-4. **Iconos celdas**: 🍳 Cookidoo / 🥘 Spoonacular. `⭐{rating}` sólo si hay rating. `— {kcal} kcal` siempre (si falta, omítelo).
-5. **Cabecera de receta**: `## {emoji_día} {Día} {día_num} — {slot}: {título} {emoji_fuente}`
-   - `emoji_día`: 🐟 L, 🥣 M, 🍛 X, 🐸 J, 🥑 V, 🐟 S, 🍳 D
-   - `slot`: "Comida" o "Cena" (capitalizado).
-6. **Imagen de la receta**: Si el campo `image_url` está presente en el JSON de la receta, incluir inmediatamente después del header con formato `![{titulo}]({image_url})` (línea vacía antes y después). Si no hay `image_url`, omitir completamente esta sección.
-7. **Meta**: `⏱️ N min | 👥 N personas | 🔥 N kcal/ración | 🔗 [Cookidoo|Spoonacular](url)` — separador ` | `, N como entero.
-8. **Ingredientes**: lista `- {cantidad}{unidad} {nombre}`. Units:
-   - `g` → `400g` (sin espacio)
-   - `ml` → `200 ml`
-   - `uds` → `5 uds` (singular `1 ud`)
-   - sin unidad → `- {nombre}`
-8. **Preparación**: header `### Preparación (Thermomix)` si `source=cookidoo`, sino `### Preparación`.
-9. **Pasos**: numerados `1. ... 2. ...` (sin reset entre recetas no — sí reset por receta).
-10. **Separador**: `---` entre recetas, entre tabla y recetas, y entre recetas y lista.
-11. **Lista de la compra**: 4 tablas fijas (Proteínas, Verduras y frutas, Despensa, Condimentos y básicos), aunque estén vacías se muestran con fila `| — | — | — |`.
-12. **Letras recetas**: L,M,X,J,V,S,D. Si un ingrediente se usa en muchas, mostrar todas separadas por `, `.
-13. **Footer**: `*Generado por Hermes Meal-to-Cart — {DD/MM/YYYY}*` con fecha del día de generación.
+1. **Título H1**: `# 🍽️ Menú semanal — {rango de fechas}` (mes en español minúscula).
+2. **Subtítulo**: preferencias en cursiva `_..._`. Si no hay, omitir.
+3. **Tabla resumen**: 4 columnas fijas (Día, Receta, Tiempo, kcal). Si hay comidas Y cenas, cambia a 3 columnas (Día, Comida, Cena) con `(tiempo · kcal)` en cada celda. Días vacíos con `—`.
+4. **Blockquote resumen**: leyenda de iconos + media/total kcal en negrita.
+5. **Cabecera de receta**: `### {emoji_fuente} {Día} {n} · {slot}: {título}` — el emoji del día se elimina (redundante con el día ya nombrado); el emoji de fuente (🍳/🥘) va delante.
+6. **Foto del plato**: `![{titulo}]({image_url})` inmediatamente debajo del header (línea vacía antes y después). Si no hay `image_url`, se omite.
+7. **Meta con kcal**: badges en línea separados por ` · `, en este orden fijo: `⏱️ Xmin · 👥 X personas · 🔥 X kcal/ración · ⭐ X · 🔗 [Fuente](url)`. Todos los valores numéricos en **negrita**. `⭐` solo si hay rating. `🔥 kcal/ración` siempre — es requisito.
+8. **Descripción**: blockquote `> ...` (opcional pero recomendado) entre meta e ingredientes.
+9. **Ingredientes**: `### 🛒 Ingredientes` + lista `- {cantidad}{unidad} {nombre}`. Units: `g`→`400g`, `ml`→`200 ml`, `uds`→`5 uds` (singular `1 ud`), sin unidad → `- {nombre}`.
+10. **Preparación**: `### 👨‍🍳 Preparación (Thermomix)` si `source=cookidoo`, sino `### 👨‍🍳 Preparación`. Pasos numerados `1. 2. ...` (el generador re-numera automáticamente — no incluir "1." en el texto de `steps`).
+11. **Separador `---`**: entre tabla y sección de recetas, y entre cada receta.
+12. **Footer**: `_Generado por Hermes Meal-to-Cart — {DD/MM/YYYY}_` en cursiva.
+
+## Campos JSON obligatorios por receta
+
+Para que el markdown salga bien:
+
+- `title` (str)
+- `source` (`"cookidoo"` | `"spoonacular"`)
+- `url` (str)
+- `image_url` (str) — **muy recomendado**, sin él la ficha pierde impacto visual
+- `time_minutes` (int)
+- `servings` (int)
+- `calories_per_serving` (int) — **obligatorio**, se muestra tanto en la tabla como en la meta
+- `ingredients` (`[{name, amount, unit}]`)
+- `steps` (`[str]` sin numeración previa)
+
+Opcionales pero recomendados:
+
+- `description` (str, 1-2 frases)
+- `rating` (float)
 
 ## Ejemplo mínimo
 
 ````markdown
-# Menú semanal — 13 al 19 de julio de 2026
-**2 personas | Mediterránea | 30 min max | Sin gluten**
+# 🍽️ Menú semanal — 20 al 26 de julio de 2026
+_2 personas · Mediterránea · sin gluten_
 
-## 📅 Tabla semanal
+## 📅 Resumen de la semana
 
-| Día | Comida | Cena |
-|-----|--------|------|
-| **Lunes 13** | — | 🍳 Salmón al vapor (25 min) ⭐4.5 — 480 kcal |
-...
+| Día | Receta | Tiempo | kcal |
+|-----|--------|--------|------|
+| **Lunes 20** | 🍳 Salmón al vapor | 25 min | 480 kcal |
+| ...
+
+> 🍳 = Thermomix · 🥘 = Tradicional
+> 🔥 Media: **~450 kcal/plato** · Total semanal: **~3.150 kcal**
 
 ---
 
-## 🐟 Lunes 13 — Cena: Salmón al vapor con verduras 🍳
+## 📋 Recetas detalladas
+
+### 🍳 Lunes 20 · Cena: Salmón al vapor con verduras
 
 ![Salmón al vapor con verduras](https://assets.tmecosys.com/image/upload/t_web767x639/img/recipe/ras/Assets/715538.jpg)
 
-⏱️ 25 min | 👥 2 personas | 🔥 480 kcal/ración | 🔗 [Cookidoo](https://cookidoo.es/recipes/715538)
+⏱️ **25 min** · 👥 **2 personas** · 🔥 **480 kcal/ración** · ⭐ **4.5** · 🔗 [Cookidoo](https://cookidoo.es/recipes/715538)
 
-### Ingredientes
+> Salmón jugoso al vapor sobre lecho de verduras variadas, ligero y rápido.
+
+### 🛒 Ingredientes
 - 400g salmón fresco
 - 2 uds de calabacín
 
-### Preparación (Thermomix)
+### 👨‍🍳 Preparación (Thermomix)
 1. Cortar los calabacines
 2. Cocer al vapor 20 min / Varoma
 
 ---
-````
 
-Ver `references/ejemplo_menu_semanal.md` para un ejemplo completo de 7 días.
+_Generado por Hermes Meal-to-Cart — 14/07/2026_
+````
