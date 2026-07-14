@@ -36,12 +36,55 @@ Devuelve un JSON:
 ```json
 {
   "shopping_list": [
-    {"name": "salmón fresco lomo", "category": "proteinas", "quantity": "400g (2 lomos)", "mercadona_query": "salmón fresco", "estimated_price_eur": 10.0, "needs_stock_check": false}
+    {
+      "name": "tomate",
+      "quantity": 6,
+      "unit": "ud",
+      "fresh": true,
+      "category": "Verdura",
+      "mercadona_query": "tomate",
+      "estimated_price_eur": 10.0,
+      "needs_stock_check": false
+    },
+    {
+      "name": "salmón fresco",
+      "quantity": 400,
+      "unit": "g",
+      "fresh": true,
+      "category": "Marisco y pescado",
+      "mercadona_query": "salmón",
+      "estimated_price_eur": 8.0,
+      "needs_stock_check": false
+    }
   ],
-  "total_estimated_eur": 45.7,
-  "raw_queries_for_mercadona": ["salmón fresco", "calabacín", "cebolla", ...]
+  "total_estimated_eur": 65.7
 }
 ```
+
+### Campos nuevos (para mercadona-cli wrapper):
+
+- **`unit`**: Unidad real de medida. Valores: `"ud"`, `"g"`, `"kg"`, `"ml"`, `"L"`.
+  - **⚠️ Importante:** Productos que se venden por UNIDAD (aceite, leche, conservas, pan) DEBEN usar `"ud"` con cantidad entera.
+  - Ejemplos:
+    - 6 tomates → `{"quantity": 6, "unit": "ud"}`
+    - 400g salmón → `{"quantity": 400, "unit": "g"}`
+    - 500ml aceite → `{"quantity": 1, "unit": "ud"}` (¡NO 0.5!)
+    
+- **`fresh`**: Boolean. `true` para productos frescos (verduras, carnes, pescados), `false` para despensa/conservas.
+  - Ayuda al CLI a usar flag `--fresh` (excluye congelados/conservas cuando se busca producto fresco).
+  - Heurística:
+    - Verduras, frutas, carnes, pescado fresco → `true`
+    - Arroz, pasta, legumbres secas, conservas, aceite, leche → `false`
+    
+- **`category`**: String opcional. Categoría de Mercadona para mejorar matching.
+  - Valores comunes (nombres EXACTOS de Mercadona):
+    - `"Fruta y verdura"` — verduras y frutas frescas
+    - `"Marisco y pescado"` — pescado/marisco fresco
+    - `"Carnes y aves"` — carnes frescas
+    - `"Conservas, caldos y cremas"` — legumbres en bote, caldos
+    - `null` — para productos genéricos (arroz, aceite, huevos)
+  - **⚠️ Importante:** Usar nombres EXACTOS. "Verdura" no existe, usar "Fruta y verdura".
+  - Usa `null` si no estás seguro de la categoría exacta (el flag `--fresh` suele ser suficiente).
 
 ## Heurísticas de conversión
 
