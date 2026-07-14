@@ -456,16 +456,6 @@ mercadona import-curl --file /tmp/mercadona_curl.txt
 
 ---
 
-## 🤝 Contribuir
-
-1. Fork el repo
-2. Crea una branch (`git checkout -b feature/mejora`)
-3. Commit tus cambios (`git commit -m 'feat: añadir X'`)
-4. Push a la branch (`git push origin feature/mejora`)
-5. Abre un Pull Request
-
----
-
 ## 📝 Licencia
 
 MIT License - ver [LICENSE](LICENSE) para detalles.
