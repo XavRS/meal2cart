@@ -123,6 +123,26 @@ Hermes aplica el prompt `prompts/ingredient_consolidation.md` para
 reducir el JSON de menú a una lista de la compra en
 `{ "shopping_list": [ … ] }` que se pasa a Mercadona.
 
+**⚠️ Formato crítico 2026-07-14:** La shopping list DEBE usar **unidades de venta reales** de Mercadona, NO cantidades exactas en gramos de la receta.
+
+**Correcto:**
+```json
+[
+  {"name": "aceitunas negras", "quantity": 1, "unit": "ud", "fresh": false},
+  {"name": "mozzarella", "quantity": 2, "unit": "ud", "fresh": true}
+]
+```
+
+**Incorrecto (causa bug de conversión):**
+```json
+[
+  {"name": "aceitunas negras", "quantity": 150, "unit": "g", "fresh": false}
+  // → wrapper NO convierte correctamente → 150 unidades = 285€
+]
+```
+
+**Regla:** Si el producto es conserva, aceite, leche, queso rallado, pasta seca → usar `unit: "ud"` con cantidad entera (1 lata, 1 botella, 2 paquetes). Solo verduras/frutas/carnes frescas vendidas por peso usan `unit: "g"` o `"kg"` (el wrapper SÍ convierte bien estos).
+
 ### Añadir todo al carrito de Mercadona
 
 > ✅ **Migración completada 2026-07-14:** Spike exitoso con **carrito real probado**.
@@ -206,6 +226,7 @@ meal2cart/
 │   ├── mercadona-cli-setup.md         # ✅ Instalación + auth (import-curl)
 │   ├── mercadona-cli-usage.md         # ✅ Ejemplos prácticos CLI
 │   ├── mercadona-cli-json-schemas.md  # ✅ Estructuras JSON
+│   ├── e2e-test-case-ensalada.md      # ✅ Caso de uso end-to-end completo (2026-07-14)
 │   ├── cli-wrapper-pattern.md         # ✅ Patrón CLI→Python reusable
 │   ├── mercadona-cli.md               # (legacy, pre-wrapper)
 │   ├── mercadona-quirks.md
@@ -252,6 +273,26 @@ meal2cart/
 **Solución:** `PYTHONPATH=/path/to/scripts:$PYTHONPATH python3 test.py` o mover wrapper a package instalable.  
 **Nota:** No afecta uso real (Hermes maneja PYTHONPATH automáticamente).
 
+### 5. Flag --category requiere ID numérico, NO string
+**Problema:** `mercadona batch -f - --fresh --category "Fruta y verdura"` → error "category is ambiguous".  
+**Síntoma:** `subprocess.CalledProcessError` con exit status 1.  
+**Causa:** El flag `--category` de mercadona-cli espera ID numérico (ej: `1`, `145`), no nombre de categoría.  
+**Solución:** (1) Obtener ID con `mercadona categories | grep "nombre"`, o (2) **RECOMENDADO:** omitir `--category` y usar solo `--fresh` (suficiente para verduras/proteínas/frescos).  
+**Fix aplicado 2026-07-14:** Shopping lists usan `category: None` + flag `--fresh` únicamente.
+
+### 6. Bug conversión g→unidades en wrapper (RESUELTO 2026-07-14)
+**Problema:** Productos en conserva/pack con `unit: "g"` se convierten incorrectamente.  
+**Ejemplo:** `{"name": "aceitunas negras", "quantity": 150, "unit": "g"}` → wrapper NO convierte a kg → mercadona-cli interpreta como 150 UNIDADES → subtotal 285€ en lugar de ~2€.  
+**Causa:** Lógica de conversión en `mercadona_cli_wrapper.py` solo chequeaba `is_pack`, pero productos como aceitunas en lata son pack Y se venden por peso.  
+**Solución aplicada:** Wrapper ahora usa `reference_format` para detectar si el producto se vende por kg (convertir g→kg) o por unidad (mantener qty original). Ver commit `fix: improve unit conversion logic in wrapper`.  
+**Workaround alternativo:** Usar `unit: "ud"` con cantidad entera (1 lata, 1 bote, 1 paquete) en lugar de gramos.
+
+### 7. Búsquedas ambiguas pueden devolver productos preparados
+**Problema:** Query "albahaca fresca" devuelve "Salsa fresca Pesto" en lugar de maceta de albahaca.  
+**Causa:** Algoritmo de matching de Mercadona prioriza productos preparados/populares sobre frescos cuando la query es genérica.  
+**Solución:** (1) Queries más específicas ("albahaca maceta", "albahaca planta"), (2) usar `--fresh` agresivamente, o (3) validar top result antes de añadir al carrito (Gate 1 con preview).  
+**Lección:** El preview (Gate 1) es crítico para detectar sustituciones inesperadas antes de commit al carrito.
+
 ## Troubleshooting
 
 | Síntoma | Causa probable | Solución |
@@ -275,7 +316,45 @@ meal2cart/
 | MCP no responde tras enviar comandos | stdin se cierra antes de que el servidor procese | Mantén stdin abierto con `sleep N` o usa `subprocess.Popen`. Ver `references/cookidough-mcp-usage.md` |
 | `get_recipe_details` no devuelve pasos | El endpoint de Cookidoo no incluye `steps` en la respuesta | Escribe los pasos manualmente o consulta la URL de la receta. Ver `references/cookidough-mcp-usage.md` |
 | Ingredientes de Cookidoo sin nombre (\"200 g\", \"1 chorrito\") | `get_recipe_details` devuelve `description` con cantidades pero `name` es null | Inferir ingredientes por contexto, abrir URL en navegador, o usar Spoonacular como fuente alternativa. Ver `references/cookidough-mcp-usage.md` |
-| Resultados de Cookidoo en alemán | `COOKIDOUGH_COUNTRY` y `COOKIDOUGH_LANGUAGE` no están configurados (default ambos `\"de\"`) | Establecer `COOKIDOUGH_COUNTRY=es` y `COOKIDOUGH_LANGUAGE=es`. Borrar cookies viejas (`rm ~/.hermes/data/cookidough_cookies.json`) y re-logín. Ver `references/cookidough_setup.md` |
+| Resultados de Cookidoo en alemán | `COOKIDOUGH_COUNTRY` y `COOKIDOUGH_LANGUAGE` no están configurados (default ambos `\\\"de\\\"`) | Establecer `COOKIDOUGH_COUNTRY=es` y `COOKIDOUGH_LANGUAGE=es`. Borrar cookies viejas (`rm ~/.hermes/data/cookidough_cookies.json`) y re-logín. Ver `references/cookidough_setup.md` |
+| `mercadona batch --category "Fruta y verdura"` → error "ambiguous" | Flag `--category` requiere ID numérico, no string | Usar ID numérico (`mercadona categories` para ver lista) o **MEJOR:** omitir `--category` y usar solo `--fresh` |
+| Producto conserva/pack subtotal absurdo (ej: aceitunas 285€) | Wrapper convierte mal cantidades en gramos para productos unitarios | **RESUELTO 2026-07-14:** Fix aplicado en wrapper (usa `reference_format`). Ver Pitfall #6 |
+| Búsqueda devuelve preparado en vez de fresco (ej: pesto en vez de albahaca) | Query ambigua, algoritmo Mercadona prioriza preparados | Query más específica ("albahaca maceta") o validar en preview (Gate 1) antes de commit |
+
+## Test end-to-end real completado (2026-07-14)
+
+**Receta:** Ensalada italiana de pasta con pesto (Cookidoo r221200)  
+**Flujo:** Cookidoo → Shopping list → Mercadona → Carrito REAL  
+**Resultado:** ✅ **100% exitoso**
+
+### Métricas
+
+- Productos resueltos: **9/9 (100%)**
+- Total estimado: **20.95€**
+- Total real: **20.95€** (coincidencia 100%)
+- Tiempo total: **~2 minutos**
+- Errores: **0**
+
+### Productos añadidos al carrito
+
+1. Queso rallado mozzarella — 1.60€
+2. Piñones Hacendado — 3.25€
+3. Aceite oliva virgen extra — 4.80€
+4. Ajos morados — 1.85€
+5. Salsa pesto albahaca — 1.90€ ⚠️ (buscado: albahaca fresca)
+6. Pasta fusilli lentejas — 1.65€
+7. Aceitunas negras — 1.90€
+8. Tomates cherry — 2.20€
+9. Mozzarella × 2 — 1.80€
+
+### Lecciones
+
+1. **Gate 1 es crítico** — preview detectó sustitución albahaca→pesto antes de commit
+2. **Conversión g→ud funciona** — tras fix, aceitunas 150g = 1 lata (1.90€), NO 150 unidades (285€)
+3. **Flag --fresh suficiente** — no necesita --category (evita errores de ID numérico)
+4. **Estimación = Real** — mercadona-cli preview es 100% fiable para presupuestos
+
+**Documentación completa:** Ver `/mnt/vault/Personal/Hermes/meal-to-cart/2026-07-14_TEST_ENSALADA_COMPLETADO.md`
 
 ## Development
 
@@ -286,6 +365,16 @@ meal2cart/
   Ver `references/testing-patterns.md`.
 - Para activar formato de logs, usa `LOG_LEVEL=DEBUG` (no implementado
   pero reservado en `mercadona_client.log` para futura mejora).
+
+### Test end-to-end como gate de calidad
+
+**Patrón:** Tras migración o cambios en wrappers, ejecutar test end-to-end ANTES de considerar completo:
+
+```bash
+PYTHONPATH=scripts:$PYTHONPATH python3 tests/test_e2e_mercadona_cli.py
+```
+
+**Lección 2026-07-14:** El test e2e reveló bug de categorías (`"Verdura"` vs `"Fruta y verdura"`) que no habría sido detectado con tests unitarios mock. Los tests e2e con CLI real son el gate definitivo para validar integraciones.
 
 ## Licencia
 

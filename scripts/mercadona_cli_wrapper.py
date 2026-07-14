@@ -169,12 +169,19 @@ class MercadonaCLI:
             is_pack = hit["price_instructions"].get("is_pack", False)
             
             # Ajustar cantidad si es necesario
-            # Si el producto es pack y la cantidad es por unidad, convertir
             notes = ""
-            if item.get("unit") == "g" and not is_pack:
-                # Convertir gramos a kg si el producto se vende por peso
-                qty = qty / 1000.0
-                notes = f"Convertido {item['quantity']}g → {qty}kg"
+            
+            # Convertir gramos a kg si el producto se vende por peso
+            # SOLO si unit="g" y el producto NO es pack unitario (botella, paquete único)
+            if item.get("unit") == "g":
+                # Detectar si es producto por peso o pack
+                reference_format = hit["price_instructions"].get("reference_format", "")
+                
+                # Si reference_format es "kg" o vacío → producto por peso, convertir
+                # Si es "ud" o "u" → producto unitario, NO convertir
+                if reference_format in ["kg", ""]:
+                    qty = qty / 1000.0
+                    notes = f"Convertido {item['quantity']}g → {qty}kg"
             
             # Calcular subtotal
             subtotal = round(unit_price * qty, 2)
