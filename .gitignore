@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Archivos temporales de sesión (baskets, menus, listas generadas en runtime)
+basket*.txt
+shopping_list*.json
+*_search_results.json
+menu_*.json
+recetario_*.md
