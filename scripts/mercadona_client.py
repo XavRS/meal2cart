@@ -187,8 +187,8 @@ class MercadonaClient:
         if not await self._is_in_tienda():
             await self._set_postal_code(self.cp)
 
-        # Intentar login si hay credenciales o se fuerza
-        if force_login or MERCADONA_EMAIL:
+        # Intentar login solo si se fuerza explícitamente con --login
+        if force_login:
             await self._do_login()
 
     async def _accept_cookies(self) -> None:
@@ -223,6 +223,31 @@ class MercadonaClient:
         await self.page.wait_for_timeout(1000)
         log("cp", f"URL actual: {self.page.url}")
 
+    # -- overlays / modals --------------------------------------------------
+    async def _dismiss_overlays(self) -> None:
+        """Cierra modales/overlays que bloquean la interacción (info, avisos)."""
+        dismiss_selectors = [
+            'button[aria-label="Cerrar"]',
+            'button:has-text("Cerrar")',
+            ".modal__close",
+            '[data-testid="modal-close-button"]',
+        ]
+        for sel in dismiss_selectors:
+            try:
+                el = self.page.locator(sel).first
+                if await el.count() > 0 and await el.is_visible():
+                    await el.click(timeout=3000)
+                    log("overlay", f"Modal cerrado: {sel}")
+                    await self.page.wait_for_timeout(1000)
+            except Exception:
+                pass
+        # También intentar tecla Escape
+        try:
+            await self.page.keyboard.press("Escape")
+            await self.page.wait_for_timeout(500)
+        except Exception:
+            pass
+
     # -- login wall --------------------------------------------------------
     async def _check_login_wall(self) -> bool:
         """Detecta si Mercadona pide login para acceder al carrito."""
@@ -256,6 +281,9 @@ class MercadonaClient:
 
         # Cerrar modal de cookies si aparece
         await self._accept_cookies()
+
+        # Cerrar cualquier modal que bloquee la página (info, avisos, etc.)
+        await self._dismiss_overlays()
 
         # Abrir dropdown "Identifícate"
         identifica = self.page.locator(SEL_IDENTIFICATE)
