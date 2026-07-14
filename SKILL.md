@@ -100,12 +100,38 @@ usa `subprocess.Popen` o pipes para llamarlos vía JSON-RPC sobre stdio.
 Ver **`references/cookidough-mcp-usage.md`** para el protocolo exacto,
 el manejo de stdin, y los quirks conocidos.
 
-### Sincronizar con Cookidoo ("Mi semana")
+### Sincronizar con Cookidoo ("Mi semana") ⚠️ OBLIGATORIO
 
-Una vez generado el menú, las recetas de Cookidoo pueden añadirse al
-calendario de la Thermomix con `add_recipes_to_calendar`. Ver
-**`references/cookidoo-calendar-sync.md`** para el flujo completo y
-ejemplos de código.
+**⚠️ REGLA:** Siempre que uses una receta de Cookidoo, DEBES añadirla al calendario "Mi semana" del día planificado.
+
+Las recetas de Cookidoo deben añadirse al calendario de la Thermomix con `add_to_calendar()` para que aparezcan automáticamente en el dispositivo tras sincronizar.
+
+**Flujo obligatorio:**
+```python
+from scripts.cookidough_client import CookidoughClient
+from datetime import date
+
+client = CookidoughClient()
+
+# 1. Buscar/obtener receta
+recipe = client.get_recipe("r221200")
+
+# 2. SIEMPRE añadir al calendario del día planificado
+day = date.today().isoformat()  # O el día específico del menú
+client.add_to_calendar([recipe["id"]], day)
+
+# 3. Continuar con shopping list → Mercadona
+# ...
+
+client.close()
+```
+
+**Métodos disponibles:**
+- `add_to_calendar(recipe_ids, day)` — Añadir una o varias recetas a un día
+- `get_calendar_week(day)` — Ver el calendario de la semana
+- `remove_from_calendar(recipe_id, day)` — Eliminar una receta
+
+Ver **`references/cookidoo-calendar-sync.md`** para ejemplos avanzados (múltiples recetas por día, semanas completas).
 
 ### Generar el Markdown de recetas
 
@@ -226,7 +252,7 @@ meal2cart/
 │   ├── mercadona-cli-setup.md         # ✅ Instalación + auth (import-curl)
 │   ├── mercadona-cli-usage.md         # ✅ Ejemplos prácticos CLI
 │   ├── mercadona-cli-json-schemas.md  # ✅ Estructuras JSON
-│   ├── e2e-test-case-ensalada.md      # ✅ Caso de uso end-to-end completo (2026-07-14)
+│   ├── e2e-testing-pattern.md         # ✅ Patrón test end-to-end con carrito REAL (2026-07-14)
 │   ├── cli-wrapper-pattern.md         # ✅ Patrón CLI→Python reusable
 │   ├── mercadona-cli.md               # (legacy, pre-wrapper)
 │   ├── mercadona-quirks.md
@@ -368,13 +394,13 @@ meal2cart/
 
 ### Test end-to-end como gate de calidad
 
-**Patrón:** Tras migración o cambios en wrappers, ejecutar test end-to-end ANTES de considerar completo:
+**Patrón:** Tras migración o cambios en wrappers, ejecutar test end-to-end ANTES de considerar completo. Ver **`references/e2e-testing-pattern.md`** para el patrón completo validado con carrito REAL.
 
 ```bash
 PYTHONPATH=scripts:$PYTHONPATH python3 tests/test_e2e_mercadona_cli.py
 ```
 
-**Lección 2026-07-14:** El test e2e reveló bug de categorías (`"Verdura"` vs `"Fruta y verdura"`) que no habría sido detectado con tests unitarios mock. Los tests e2e con CLI real son el gate definitivo para validar integraciones.
+**Lección 2026-07-14:** El test e2e reveló 2 bugs críticos (categorías incorrectas + conversión g→unidades) que tests unitarios mock no habrían detectado. Los tests e2e con CLI real son el gate definitivo para validar integraciones. Preview (Gate 1) es crítico para detectar sustituciones antes de commit al carrito.
 
 ## Licencia
 

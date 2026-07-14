@@ -4,8 +4,19 @@
 Uso:
     from cookidough_client import CookidoughClient
     client = CookidoughClient()
+    
+    # Búsqueda
     recipes = client.search("gazpacho", limit=3)
+    
+    # Detalles de receta
     detail = client.get_recipe("r132404")
+    
+    # Añadir al calendario "Mi semana"
+    client.add_to_calendar(["r221200"], "2026-07-15")
+    
+    # Ver calendario
+    week = client.get_calendar_week("2026-07-15")
+    
     client.close()
 """
 
@@ -140,6 +151,50 @@ class CookidoughClient:
         items = self._call_tool("get_user_profile")
         return items[0] if items else None
 
+    def add_to_calendar(self, recipe_ids: list[str], day: str) -> dict[str, Any] | None:
+        """Add recipes to calendar 'Mi semana' for a specific day.
+        
+        Args:
+            recipe_ids: List of recipe IDs (e.g., ["r221200", "r505494"])
+            day: Date in YYYY-MM-DD format (e.g., "2026-07-15")
+            
+        Returns:
+            Result dict or None if failed
+            
+        Example:
+            client.add_to_calendar(["r221200"], "2026-07-15")
+        """
+        items = self._call_tool("add_recipes_to_calendar", {
+            "day": day,
+            "recipe_ids": recipe_ids
+        })
+        return items[0] if items else None
+
+    def get_calendar_week(self, day: str) -> dict[str, Any] | None:
+        """Get the calendar week containing the given day.
+        
+        Args:
+            day: Date in YYYY-MM-DD format
+            
+        Returns:
+            Calendar week data with recipes per day
+        """
+        items = self._call_tool("get_calendar_week", {"day": day})
+        return items[0] if items else None
+
+    def remove_from_calendar(self, recipe_id: str, day: str) -> dict[str, Any] | None:
+        """Remove a recipe from calendar for a specific day.
+        
+        Args:
+            recipe_id: Recipe ID to remove
+            day: Date in YYYY-MM-DD format
+        """
+        items = self._call_tool("remove_recipe_from_calendar", {
+            "day": day,
+            "recipe_id": recipe_id
+        })
+        return items[0] if items else None
+
     def close(self) -> None:
         """Close the MCP subprocess."""
         try:
@@ -152,7 +207,7 @@ class CookidoughClient:
 # ── CLI ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python3 cookidough_client.py <search|get> <args...>")
+        print("Uso: python3 cookidough_client.py <search|get|add-calendar|get-calendar> <args...>")
         sys.exit(1)
 
     client = CookidoughClient()
@@ -170,6 +225,25 @@ if __name__ == "__main__":
             detail = client.get_recipe(rid)
             if detail:
                 print(json.dumps(detail, indent=2, ensure_ascii=False))
+        elif cmd == "add-calendar":
+            if len(sys.argv) < 4:
+                print("Uso: python3 cookidough_client.py add-calendar <day> <recipe_id> [recipe_id2...]")
+                print("Ejemplo: python3 cookidough_client.py add-calendar 2026-07-15 r221200")
+                sys.exit(1)
+            day = sys.argv[2]
+            recipe_ids = sys.argv[3:]
+            result = client.add_to_calendar(recipe_ids, day)
+            print(f"✓ Añadidas {len(recipe_ids)} receta(s) al {day}")
+            if result:
+                print(json.dumps(result, indent=2, ensure_ascii=False))
+        elif cmd == "get-calendar":
+            day = sys.argv[2] if len(sys.argv) > 2 else None
+            if not day:
+                from datetime import date
+                day = date.today().isoformat()
+            week = client.get_calendar_week(day)
+            if week:
+                print(json.dumps(week, indent=2, ensure_ascii=False))
         else:
             print(f"Comando desconocido: {cmd}")
     finally:

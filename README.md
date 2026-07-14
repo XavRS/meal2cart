@@ -11,6 +11,7 @@ Combina recetas de **Cookidoo** (Thermomix) y **Spoonacular** (cocina tradiciona
 ## ✨ Características
 
 - 🗓️ **Planificación semanal** con recetas reales de Cookidoo y Spoonacular
+- 📱 **Sync automático** a calendario Thermomix "Mi semana"
 - 📝 **Recetario Markdown** con tabla semanal, ingredientes y pasos
 - 🛒 **Automatización Mercadona** vía API REST (40× más rápido que scraping)
 - 💰 **Spending guard** nativo (rechaza si supera presupuesto)
