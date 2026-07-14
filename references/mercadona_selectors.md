@@ -12,6 +12,7 @@ Documento de referencia para `scripts/mercadona_client.py`. Todos los selectores
 | Tienda (tras CP) | `https://tienda.mercadona.es/` |
 | Carrito | `https://tienda.mercadona.es/cart` |
 | Cuenta/login | `https://tienda.mercadona.es/account/login` |
+| Auth (login modal) | `https://tienda.mercadona.es/?authenticate-user=` |
 
 ## Flujo
 
@@ -115,10 +116,51 @@ Cuando el carrito excede un nº de items sin login, Mercadona muestra:
 
 ```css
 text="Inicia sesión"
-input[type="email"]
+input[type="email"]`
 ```
 
 El script lo detecta y aborta el add, informando al usuario para que haga login manual (primera vez).
+
+### 9. Login — flujo completo (spike 2026-07-13)
+
+El login se dispara vía `/?authenticate-user=` o con el flag `--login`.
+Flujo descubierto en spike:
+
+```python
+# 1. Abrir página de autenticación
+page.goto("https://tienda.mercadona.es/?authenticate-user=")
+
+# 2. Abrir dropdown "Identifícate"
+page.locator('button[data-testid="dropdown-button"]:has-text("Identifícate")').click()
+
+# 3. Clic "Continuar con email" (alternativa: "Continuar con Apple")
+page.locator('text="Continuar con email"').click()
+
+# 4. Rellenar email + password
+page.locator('input[type="email"]').fill(email)
+page.locator('input[type="password"]').fill(password)
+
+# 5. Submit (multi-fallback porque el botón varía)
+page.locator('button:has-text("Continuar"), button:has-text("Iniciar sesión"), button:has-text("Entrar")').click()
+
+# 6. Verificar login exitoso
+# Indicadores: "Mi cuenta" visible, [data-testid="user-menu"], o ausencia del botón "Identifícate"
+```
+
+**Selectores de login:**
+
+| Elemento | Selector primario | Fallback |
+|----------|-------------------|----------|
+| Botón Identifícate | `button[data-testid="dropdown-button"]:has-text("Identifícate")` | — |
+| Opción email | `text="Continuar con email"` | — |
+| Input email | `input[type="email"]` | `input[name="email"]` |
+| Input password | `input[type="password"]` | `input[name="password"]` |
+| Submit | `button:has-text("Continuar")` | `button:has-text("Iniciar sesión")`, `button:has-text("Entrar")` |
+| Login exitoso | `text="Mi cuenta"` | `[data-testid="user-menu"]` |
+| Error login | `[role="alert"]` | `text="incorrect"`, `text="inténtalo"` |
+
+> ⚠️ Google SSO no es automatizable. Si la cuenta usa login con Google, usar `--login --headed` para login manual.
+> ⚠️ `input[aria-label="Código postal"]` resuelve a 2 elementos en algunas páginas (header + modal). Usar `.first` para evitar strict mode violations.
 
 ## Snippets de Playwright (Python async) verificados
 
