@@ -453,7 +453,6 @@ mercadona import-curl --file /tmp/mercadona_curl.txt
 - **Ejemplos de uso:** `references/mercadona-cli-usage.md`
 - **Estructuras JSON:** `references/mercadona-cli-json-schemas.md`
 - **Skill completa:** `SKILL.md`
-- **Análisis migración:** `/mnt/vault/Personal/Hermes/meal-to-cart/README.md` (si usas Hermes)
 
 ---
 
