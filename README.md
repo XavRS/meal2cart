@@ -480,12 +480,4 @@ MIT License - ver [LICENSE](LICENSE) para detalles.
 
 ---
 
-## 📧 Soporte
-
-- **Issues:** https://github.com/XavRS/meal2cart/issues
-- **Documentación:** Ver `SKILL.md` y `references/`
-- **Email:** xriberas@gmail.com
-
----
-
-**Hecho con ❤️ y 🤖 por Xavier Riberas**
+**Hecho con ❤️ y 🤖 por Xavi**
