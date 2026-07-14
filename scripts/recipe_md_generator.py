@@ -193,11 +193,19 @@ def extract_recipe_steps(recipe: dict[str, Any] | str | list[str]) -> list[str]:
     return [str(s).strip() for s in steps if str(s).strip()]
 
 
-def render_recipe_header(day_name: str, day_num: int, meal: dict[str, Any]) -> str:
+def render_recipe_header(day_name: str, day_num: int, meal: dict[str, Any], slot: str = "Cena") -> str:
     title = meal.get("title", "(sin título)")
     icon_day = WEEKDAY_EMOJI.get(day_name, "🍽️")
     icon, _ = source_to_label(meal.get("source"))
-    return f"## {icon_day} {day_name} {day_num} — Cena: {title} {icon}"
+    return f"## {icon_day} {day_name} {day_num} — {slot.capitalize()}: {title} {icon}"
+
+
+def render_recipe_image(meal: dict[str, Any]) -> str:
+    """Renderiza la imagen de la receta si existe."""
+    image_url = meal.get("image_url")
+    if not image_url:
+        return ""
+    return f"\n![{meal.get('title', 'Foto del plato')}]({image_url})\n"
 
 
 def render_recipe_meta(meal: dict[str, Any]) -> str:
@@ -416,7 +424,10 @@ def render_menu(data: dict[str, Any]) -> str:
             if not meal:
                 continue
             out.append("")
-            out.append(render_recipe_header(day_name, day.day, meal))
+            out.append(render_recipe_header(day_name, day.day, meal, slot))
+            image = render_recipe_image(meal)
+            if image:
+                out.append(image)
             out.append(render_recipe_meta(meal))
             out.append("")
             out.append(render_recipe(meal))

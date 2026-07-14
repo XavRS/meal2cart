@@ -23,6 +23,9 @@ Esta plantilla define la SALIDA EXACTA que debe producir `scripts/recipe_md_gene
 ---
 
 ## {emoji_día} {Día} {n} — {slot}: {titulo} {emoji_fuente}
+
+![{titulo}]({image_url})
+
 ⏱️ {tiempo} min | 👥 {servings} personas | 🔥 {kcal} kcal/ración | 🔗 [{Fuente}]({url})
 
 ### Ingredientes
@@ -76,8 +79,9 @@ Esta plantilla define la SALIDA EXACTA que debe producir `scripts/recipe_md_gene
 5. **Cabecera de receta**: `## {emoji_día} {Día} {día_num} — {slot}: {título} {emoji_fuente}`
    - `emoji_día`: 🐟 L, 🥣 M, 🍛 X, 🐸 J, 🥑 V, 🐟 S, 🍳 D
    - `slot`: "Comida" o "Cena" (capitalizado).
-6. **Meta**: `⏱️ N min | 👥 N personas | 🔥 N kcal/ración | 🔗 [Cookidoo|Spoonacular](url)` — separador ` | `, N como entero.
-7. **Ingredientes**: lista `- {cantidad}{unidad} {nombre}`. Units:
+6. **Imagen de la receta**: Si el campo `image_url` está presente en el JSON de la receta, incluir inmediatamente después del header con formato `![{titulo}]({image_url})` (línea vacía antes y después). Si no hay `image_url`, omitir completamente esta sección.
+7. **Meta**: `⏱️ N min | 👥 N personas | 🔥 N kcal/ración | 🔗 [Cookidoo|Spoonacular](url)` — separador ` | `, N como entero.
+8. **Ingredientes**: lista `- {cantidad}{unidad} {nombre}`. Units:
    - `g` → `400g` (sin espacio)
    - `ml` → `200 ml`
    - `uds` → `5 uds` (singular `1 ud`)
@@ -105,6 +109,9 @@ Esta plantilla define la SALIDA EXACTA que debe producir `scripts/recipe_md_gene
 ---
 
 ## 🐟 Lunes 13 — Cena: Salmón al vapor con verduras 🍳
+
+![Salmón al vapor con verduras](https://assets.tmecosys.com/image/upload/t_web767x639/img/recipe/ras/Assets/715538.jpg)
+
 ⏱️ 25 min | 👥 2 personas | 🔥 480 kcal/ración | 🔗 [Cookidoo](https://cookidoo.es/recipes/715538)
 
 ### Ingredientes

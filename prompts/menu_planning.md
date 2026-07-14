@@ -23,8 +23,8 @@
 1. **Call cookidough.search_recipes** con keywords derivadas de las preferencias (ej. "vapor verduras sin gluten 30 min").
 2. **Call spoonacular.complexSearch** con `intolerances=gluten`, `maxReadyTime=30`, `number=10`.
 3. Para cada día, elige UNA receta (cena) y opcionalmente una comida.
-   - Para Cookidoo: extrae `title`, `url`, `time_minutes`, `servings`, `ingredients` (name/amount/unit), `steps`, `rating` (si existe), `calories_per_serving` (calcula con spoonacular si Cookidoo no lo da).
-   - Para Spoonacular: mapea `source: spoonacular`, `url`, `servings`, `readyInMinutes`, `nutrition.nutrients[calories]`, y los `analyzedInstructions`.
+   - Para Cookidoo: extrae `title`, `url`, `time_minutes`, `servings`, `ingredients` (name/amount/unit), `steps`, `rating` (si existe), `calories_per_serving` (calcula con spoonacular si Cookidoo no lo da). Para `image_url`, construye: `https://assets.tmecosys.com/image/upload/t_web767x639/img/recipe/ras/Assets/{recipe_id}.jpg` donde `recipe_id` se extrae de la URL (ej: `r123456` → `123456`).
+   - Para Spoonacular: mapea `source: spoonacular`, `url`, `servings`, `readyInMinutes`, `nutrition.nutrients[calories]`, y los `analyzedInstructions`. Para `image_url`, usa el campo `image` de la API (ej: `https://spoonacular.com/recipeImages/123-556x370.jpg`).
 4. Devuelve el JSON con esta forma EXACTA:
 
 ```json
@@ -44,7 +44,7 @@
 ```
 
 Cada receta debe contener:
-`title`, `source` (`"cookidoo"` | `"spoonacular"`), `url`, `time_minutes`, `servings`, `rating` (opcional), `calories_per_serving`, `ingredients` (`[{name, amount, unit}]`), `steps` (`[str]`).
+`title`, `source` (`"cookidoo"` | `"spoonacular"`), `url`, `image_url` (URL de la imagen del plato), `time_minutes`, `servings`, `rating` (opcional), `calories_per_serving`, `ingredients` (`[{name, amount, unit}]`), `steps` (`[str]`).
 
 ## Presentación al usuario
 
