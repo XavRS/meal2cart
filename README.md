@@ -24,11 +24,11 @@ Combina recetas de **Cookidoo** (Thermomix) y **Spoonacular** (cocina tradiciona
 
 ```
 Hermes (orquestador)
-  ├── Fase 1: Planificar menú (interactivo con Xavi, MCP)
+  ├── Fase 1: Planificar menú (interactivo con el usuario, MCP)
   ├── Fase 2: Sync Cookidoo calendar
   ├── Subagente A → generar .md + shopping list
   ├── Subagente B → resolver Mercadona + basket preview
-  ├── Gate 1: Preview → Xavi revisa → OK
+  ├── Gate 1: Preview → Usuario revisa → OK
   └── Subagente C → fill_cart
 ```
 
